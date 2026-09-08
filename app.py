@@ -158,3 +158,7 @@ with col_breakdown:
         f"* **Experience Format:** {screen_type}\n"
         f"* **Schedule Surge:** {day_type} ({show_time})"
     )
+import joblib
+
+# Re-dump with pickle protocol 4 (supported universally across Python 3.8 - 3.12+)
+joblib.dump(model_pipeline, 'ticket_pricing_model_compressed.pkl', compress=('zlib', 3), protocol=4)
