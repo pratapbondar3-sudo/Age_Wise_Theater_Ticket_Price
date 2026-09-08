@@ -52,10 +52,24 @@ st.markdown("""
 
 # List of comprehensive Indian cities categorized by cinema pricing dynamics
 INDIAN_CITIES = [
-    "Mumbai", "Delhi NCR", "Bengaluru", "Hyderabad", "Chennai", "Kolkata", "Pune", "Ahmedabad",
-    "Chandigarh", "Jaipur", "Lucknow", "Kochi", "Indore", "Bhopal", "Nagpur", "Surat", "Patna",
-    "Bhubaneswar", "Visakhapatnam", "Coimbatore", "Vadodara", "Guwahati", "Varanasi", "Dehradun",
-    "Mysuru", "Agra", "Ranchi", "Amritsar", "Madurai", "Thiruvananthapuram"
+   ADDITIONAL_CITIES = [
+    # South India
+    "Vijayawada", "Guntur", "Tirupati", "Warangal", "Mangaluru", 
+    "Hubballi-Dharwad", "Kozhikode", "Thrissur", "Kollam", "Kannur", 
+    "Tiruchirappalli", "Salem", "Tirunelveli", "Vellore",
+    
+    # North & Central
+    "Kanpur", "Prayagraj", "Meerut", "Bareilly", "Gorakhpur", 
+    "Ludhiana", "Jalandhar", "Jodhpur", "Udaipur", "Kota", 
+    "Gwalior", "Jabalpur", "Raipur", "Jammu", "Srinagar",
+    
+    # West
+    "Nashik", "Chhatrapati Sambhaji Nagar", "Kolhapur", "Solapur", 
+    "Rajkot", "Bhavnagar", "Panaji","Dharashiv","Latur","Beed",
+    
+    # East & North-East
+    "Siliguri", "Asansol", "Durgapur", "Jamshedpur", "Dhanbad", 
+    "Cuttack", "Gaya", "Muzaffarpur", "Shillong"
 ]
 
 THEATER_CHAINS = [
