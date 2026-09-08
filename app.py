@@ -1,27 +1,12 @@
 import streamlit as st
 import pandas as pd
-import joblib
-import sys
 import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import RandomForestRegressor
 
-# Fix: Alias numpy._core to numpy.core for cross-NumPy unpickling compatibility
-if not hasattr(np, "_core"):
-    sys.modules["numpy._core"] = np.core
-    sys.modules["numpy._core.multiarray"] = np.core.multiarray
-
-import streamlit as st
-import pandas as pd
-import joblib
-
-# Page configuration
-st.set_page_config(
-    page_title="Cinema Fare AI | Dynamic Box-Office Engine",
-    page_icon="🎟️",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
-# ... [rest of your app.py remains exactly the same]
 # Page configuration
 st.set_page_config(
     page_title="Cinema Fare AI | Dynamic Box-Office Engine",
@@ -65,18 +50,75 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Load serialized model pipeline
-@st.cache_resource
-def load_pricing_pipeline():
-    return joblib.load("ticket_pricing_model_compressed.pkl")
+# Cache the trained pipeline directly inside the runtime environment
+@st.cache_resource(show_spinner="Initializing AI Pricing Model...")
+def get_trained_pipeline():
+    np.random.seed(42)
+    n_samples = 6000
 
-try:
-    model_pipeline = load_pricing_pipeline()
-except FileNotFoundError:
-    st.error("⚠️ Model file `ticket_pricing_model_compressed.pkl` not found in working directory.")
-    st.stop()
+    ages = np.random.randint(3, 80, size=n_samples)
+    city_tiers = np.random.choice(['Tier 1 (Metro)', 'Tier 2', 'Tier 3'], size=n_samples, p=[0.5, 0.35, 0.15])
+    screen_types = np.random.choice(['Standard 2D', '3D', 'IMAX', '4DX', 'Gold/Recliner'], size=n_samples, p=[0.45, 0.25, 0.15, 0.05, 0.10])
+    day_types = np.random.choice(['Weekday', 'Weekend'], size=n_samples, p=[0.6, 0.4])
+    show_times = np.random.choice(['Morning', 'Matinee/Afternoon', 'Prime Evening', 'Night'], size=n_samples, p=[0.2, 0.25, 0.4, 0.15])
 
-# Sidebar: Booking Parameters
+    base_prices = []
+    for age_val, tier, screen, day, show in zip(ages, city_tiers, screen_types, day_types, show_times):
+        price = 180.0
+        if tier == 'Tier 1 (Metro)': price += 90
+        elif tier == 'Tier 2': price += 30
+        
+        if screen == '3D': price += 60
+        elif screen == 'IMAX': price += 220
+        elif screen == '4DX': price += 280
+        elif screen == 'Gold/Recliner': price += 350
+        
+        if day == 'Weekend': price += 60
+        if show == 'Prime Evening': price += 40
+        elif show == 'Morning': price -= 40
+        
+        if age_val < 12:
+            price *= 0.65
+        elif age_val >= 60:
+            price *= 0.70
+        elif 18 <= age_val <= 24:
+            price *= 0.90
+            
+        price += np.random.normal(0, 15)
+        base_prices.append(max(80.0, round(price, 2)))
+
+    df = pd.DataFrame({
+        'Age': ages,
+        'City_Tier': city_tiers,
+        'Screen_Type': screen_types,
+        'Day_Type': day_types,
+        'Show_Time': show_times,
+        'Ticket_Price_INR': base_prices
+    })
+
+    X = df.drop('Ticket_Price_INR', axis=1)
+    y = df['Ticket_Price_INR']
+
+    categorical_cols = ['City_Tier', 'Screen_Type', 'Day_Type', 'Show_Time']
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('cat', OneHotEncoder(drop='first', handle_unknown='ignore'), categorical_cols)
+        ],
+        remainder='passthrough'
+    )
+
+    pipeline = Pipeline(steps=[
+        ('preprocessor', preprocessor),
+        ('regressor', RandomForestRegressor(n_estimators=100, random_state=42))
+    ])
+
+    pipeline.fit(X, y)
+    return pipeline
+
+# Train / load model in current runtime
+model_pipeline = get_trained_pipeline()
+
+# Sidebar Inputs
 with st.sidebar:
     st.image("https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600&auto=format&fit=crop&q=80", use_container_width=True)
     st.title("🎬 Booking Preferences")
@@ -86,8 +128,7 @@ with st.sidebar:
     city_tier = st.selectbox(
         "Location / Urban Classification",
         ["Tier 1 (Metro)", "Tier 2", "Tier 3"],
-        index=0,
-        help="Metro (Mumbai, Delhi, Bengaluru, etc.) vs. Regional Cities"
+        index=0
     )
     
     screen_type = st.selectbox(
@@ -104,7 +145,7 @@ with st.sidebar:
         value="Prime Evening"
     )
 
-# Demographic Analysis Logic
+# Badge Logic
 if age < 12:
     badge_html = '<span class="concession-pill tag-child">🧒 Child Concession Applied (~35% discount)</span>'
 elif 18 <= age <= 24:
@@ -125,12 +166,12 @@ input_df = pd.DataFrame([{
 
 predicted_base = float(model_pipeline.predict(input_df)[0])
 
-# Indian Statutory Cinema GST Calculation (12% if <= ₹100, 18% if > ₹100)
+# GST Computation
 gst_rate = 0.12 if predicted_base <= 100 else 0.18
 gst_amount = predicted_base * gst_rate
 total_price = round(predicted_base + gst_amount)
 
-# Layout Presentation
+# Main Screen Output
 st.title("🇮🇳 India Cinema Ticket Price Estimator")
 st.caption("Machine Learning inference engine for demographic and dynamic theater pricing across Indian screens.")
 st.divider()
@@ -178,7 +219,3 @@ with col_breakdown:
         f"* **Experience Format:** {screen_type}\n"
         f"* **Schedule Surge:** {day_type} ({show_time})"
     )
-import joblib
-
-# Re-dump with pickle protocol 4 (supported universally across Python 3.8 - 3.12+)
-joblib.dump(model_pipeline, 'ticket_pricing_model_compressed.pkl', compress=('zlib', 3), protocol=4)
