@@ -71,7 +71,7 @@ INDIAN_CITIES = [
     "Siliguri", "Asansol", "Durgapur", "Jamshedpur", "Dhanbad", 
     "Cuttack", "Gaya", "Muzaffarpur", "Shillong"
 ]
-
+]
 THEATER_CHAINS = [
     "PVR INOX Multiplex", "Cinepolis", "Miraj Cinemas", "Carnival Cinemas", 
     "MovieMax", "Wave Cinemas", "SRS Cinemas", "Single Screen Heritage Theater"
