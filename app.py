@@ -50,28 +50,25 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# List of comprehensive Indian cities categorized by cinema pricing dynamics
-INDIAN_CITIES = [
-   ADDITIONAL_CITIES = [
-    # South India
-    "Vijayawada", "Guntur", "Tirupati", "Warangal", "Mangaluru", 
-    "Hubballi-Dharwad", "Kozhikode", "Thrissur", "Kollam", "Kannur", 
-    "Tiruchirappalli", "Salem", "Tirunelveli", "Vellore",
-    
-    # North & Central
-    "Kanpur", "Prayagraj", "Meerut", "Bareilly", "Gorakhpur", 
-    "Ludhiana", "Jalandhar", "Jodhpur", "Udaipur", "Kota", 
-    "Gwalior", "Jabalpur", "Raipur", "Jammu", "Srinagar",
-    
-    # West
-    "Nashik", "Chhatrapati Sambhaji Nagar", "Kolhapur", "Solapur", 
-    "Rajkot", "Bhavnagar", "Panaji","Dharashiv","Latur","Beed",
-    
-    # East & North-East
-    "Siliguri", "Asansol", "Durgapur", "Jamshedpur", "Dhanbad", 
-    "Cuttack", "Gaya", "Muzaffarpur", "Shillong"
-]
-]
+# Comprehensive All-India Cities List
+INDIAN_CITIES = sorted([
+    # Original Metros & Tier 1/2
+    "Mumbai", "Delhi NCR", "Bengaluru", "Hyderabad", "Chennai", "Kolkata", "Pune", "Ahmedabad",
+    "Chandigarh", "Jaipur", "Lucknow", "Kochi", "Indore", "Bhopal", "Nagpur", "Surat", "Patna",
+    "Bhubaneswar", "Visakhapatnam", "Coimbatore", "Vadodara", "Guwahati", "Varanasi", "Dehradun",
+    "Mysuru", "Agra", "Ranchi", "Amritsar", "Madurai", "Thiruvananthapuram",
+    # Additional South India Hubs
+    "Vijayawada", "Guntur", "Tirupati", "Warangal", "Mangaluru", "Hubballi-Dharwad",
+    "Kozhikode", "Thrissur", "Kollam", "Kannur", "Tiruchirappalli", "Salem", "Tirunelveli", "Vellore",
+    # Additional North & Central India Hubs
+    "Kanpur", "Prayagraj", "Meerut", "Bareilly", "Gorakhpur", "Ludhiana", "Jalandhar",
+    "Jodhpur", "Udaipur", "Kota", "Gwalior", "Jabalpur", "Raipur", "Jammu", "Srinagar",
+    # Additional West India Hubs
+    "Nashik", "Chhatrapati Sambhaji Nagar", "Kolhapur", "Solapur", "Rajkot", "Bhavnagar", "Panaji","Dharashiv","Latur","Beed"
+    # Additional East & North-East Hubs
+    "Siliguri", "Asansol", "Durgapur", "Jamshedpur", "Dhanbad", "Cuttack", "Gaya", "Muzaffarpur", "Shillong"
+])
+
 THEATER_CHAINS = [
     "PVR INOX Multiplex", "Cinepolis", "Miraj Cinemas", "Carnival Cinemas", 
     "MovieMax", "Wave Cinemas", "SRS Cinemas", "Single Screen Heritage Theater"
@@ -90,20 +87,33 @@ DAYS_OF_WEEK = [
 @st.cache_resource(show_spinner="Training All-India Pricing Engine...")
 def get_trained_pipeline():
     np.random.seed(42)
-    n_samples = 8000
+    n_samples = 10000
 
     ages = np.random.randint(3, 80, size=n_samples)
     cities = np.random.choice(INDIAN_CITIES, size=n_samples)
     theaters = np.random.choice(THEATER_CHAINS, size=n_samples)
-    screen_types = np.random.choice(['Standard 2D', '3D', 'IMAX', '4DX', 'Gold/Recliner'], size=n_samples, p=[0.40, 0.25, 0.15, 0.08, 0.12])
+    screen_types = np.random.choice(
+        ['Standard 2D', '3D', 'IMAX', '4DX', 'Gold/Recliner'], 
+        size=n_samples, 
+        p=[0.40, 0.25, 0.15, 0.08, 0.12]
+    )
     months = np.random.choice(ALL_MONTHS, size=n_samples)
     days = np.random.choice(DAYS_OF_WEEK, size=n_samples)
-    show_times = np.random.choice(['Morning', 'Matinee/Afternoon', 'Prime Evening', 'Night'], size=n_samples, p=[0.2, 0.25, 0.4, 0.15])
+    show_times = np.random.choice(
+        ['Morning', 'Matinee/Afternoon', 'Prime Evening', 'Night'], 
+        size=n_samples, 
+        p=[0.2, 0.25, 0.4, 0.15]
+    )
 
-    tier_1_cities = {"Mumbai", "Delhi NCR", "Bengaluru", "Hyderabad", "Chennai", "Kolkata", "Pune", "Ahmedabad"}
-    tier_2_cities = {"Chandigarh", "Jaipur", "Lucknow", "Kochi", "Indore", "Bhopal", "Nagpur", "Surat", "Visakhapatnam", "Coimbatore", "Vadodara"}
-    
-    # Holiday / festive peak release months (Diwali, Eid, Christmas, Summer Holidays)
+    tier_1_cities = {
+        "Mumbai", "Delhi NCR", "Bengaluru", "Hyderabad", 
+        "Chennai", "Kolkata", "Pune", "Ahmedabad"
+    }
+    tier_2_cities = {
+        "Chandigarh", "Jaipur", "Lucknow", "Kochi", "Indore", "Bhopal", 
+        "Nagpur", "Surat", "Visakhapatnam", "Coimbatore", "Vadodara", 
+        "Kanpur", "Prayagraj", "Ludhiana", "Vijayawada", "Kozhikode", "Nashik", "Rajkot"
+    }
     peak_months = {"May", "June", "October", "November", "December"}
 
     base_prices = []
@@ -136,7 +146,7 @@ def get_trained_pipeline():
         elif day == 'Friday':
             price += 30
         elif day in ['Tuesday', 'Wednesday']:
-            price -= 20  # Mid-week discount runs
+            price -= 20
             
         # Show Time Impact
         if show == 'Prime Evening': price += 40
@@ -155,7 +165,7 @@ def get_trained_pipeline():
             price *= 0.90
             
         price += np.random.normal(0, 15)
-        base_prices.append(max(70.0, round(price, 2)))
+        base_prices.append(max(80.0, round(price, 2)))
 
     df = pd.DataFrame({
         'Age': ages,
@@ -195,7 +205,7 @@ with st.sidebar:
     st.image("https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600&auto=format&fit=crop&q=80", use_container_width=True)
     st.title("🎬 All-India Cinema Booking")
     
-    city = st.selectbox("Select City", sorted(INDIAN_CITIES), index=0)
+    city = st.selectbox("Select City", INDIAN_CITIES, index=0)
     theater = st.selectbox("Theater / Chain", THEATER_CHAINS, index=0)
     
     booking_date = st.date_input(
