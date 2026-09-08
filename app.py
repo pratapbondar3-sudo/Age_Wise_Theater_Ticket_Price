@@ -1,7 +1,27 @@
 import streamlit as st
 import pandas as pd
 import joblib
+import sys
+import numpy as np
 
+# Fix: Alias numpy._core to numpy.core for cross-NumPy unpickling compatibility
+if not hasattr(np, "_core"):
+    sys.modules["numpy._core"] = np.core
+    sys.modules["numpy._core.multiarray"] = np.core.multiarray
+
+import streamlit as st
+import pandas as pd
+import joblib
+
+# Page configuration
+st.set_page_config(
+    page_title="Cinema Fare AI | Dynamic Box-Office Engine",
+    page_icon="🎟️",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# ... [rest of your app.py remains exactly the same]
 # Page configuration
 st.set_page_config(
     page_title="Cinema Fare AI | Dynamic Box-Office Engine",
