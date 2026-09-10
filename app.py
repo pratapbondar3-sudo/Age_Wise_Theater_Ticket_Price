@@ -15,7 +15,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom Styling (Dark Cinema Theme)
+# Custom Styling
 st.markdown("""
     <style>
     .main {
@@ -30,18 +30,18 @@ st.markdown("""
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     }
     .price-display {
-        font-size: 3rem;
+        font-size: 2.8rem;
         font-weight: 800;
         color: #f59e0b;
         margin: 10px 0;
     }
     .concession-pill {
         display: inline-block;
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-size: 0.85rem;
+        padding: 4px 10px;
+        border-radius: 14px;
+        font-size: 0.75rem;
         font-weight: 600;
-        margin-top: 8px;
+        margin: 2px;
     }
     .tag-child { background-color: #1e3a5f; color: #60a5fa; border: 1px solid #2563eb; }
     .tag-youth { background-color: #3b2a59; color: #c084fc; border: 1px solid #9333ea; }
@@ -52,20 +52,15 @@ st.markdown("""
 
 # Comprehensive All-India Cities List
 INDIAN_CITIES = sorted([
-    # Original Metros & Tier 1/2
     "Mumbai", "Delhi NCR", "Bengaluru", "Hyderabad", "Chennai", "Kolkata", "Pune", "Ahmedabad",
     "Chandigarh", "Jaipur", "Lucknow", "Kochi", "Indore", "Bhopal", "Nagpur", "Surat", "Patna",
     "Bhubaneswar", "Visakhapatnam", "Coimbatore", "Vadodara", "Guwahati", "Varanasi", "Dehradun",
     "Mysuru", "Agra", "Ranchi", "Amritsar", "Madurai", "Thiruvananthapuram",
-    # Additional South India Hubs
     "Vijayawada", "Guntur", "Tirupati", "Warangal", "Mangaluru", "Hubballi-Dharwad",
     "Kozhikode", "Thrissur", "Kollam", "Kannur", "Tiruchirappalli", "Salem", "Tirunelveli", "Vellore",
-    # Additional North & Central India Hubs
     "Kanpur", "Prayagraj", "Meerut", "Bareilly", "Gorakhpur", "Ludhiana", "Jalandhar",
     "Jodhpur", "Udaipur", "Kota", "Gwalior", "Jabalpur", "Raipur", "Jammu", "Srinagar",
-    # Additional West India Hubs
-    "Nashik", "Chhatrapati Sambhaji Nagar", "Kolhapur", "Solapur", "Rajkot", "Bhavnagar", "Panaji","Dharashiv","Latur","Beed"
-    # Additional East & North-East Hubs
+    "Nashik", "Chhatrapati Sambhaji Nagar", "Kolhapur", "Solapur", "Rajkot", "Bhavnagar", "Panaji", "Dharashiv", "Latur", "Beed",
     "Siliguri", "Asansol", "Durgapur", "Jamshedpur", "Dhanbad", "Cuttack", "Gaya", "Muzaffarpur", "Shillong"
 ])
 
@@ -83,13 +78,16 @@ DAYS_OF_WEEK = [
     "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
 ]
 
+GENDERS = ["Male", "Female", "Other"]
+
 # Cache the trained pipeline directly inside the runtime environment
 @st.cache_resource(show_spinner="Training All-India Pricing Engine...")
 def get_trained_pipeline():
     np.random.seed(42)
-    n_samples = 10000
+    n_samples = 12000
 
     ages = np.random.randint(3, 80, size=n_samples)
+    genders = np.random.choice(GENDERS, size=n_samples, p=[0.49, 0.49, 0.02])
     cities = np.random.choice(INDIAN_CITIES, size=n_samples)
     theaters = np.random.choice(THEATER_CHAINS, size=n_samples)
     screen_types = np.random.choice(
@@ -117,7 +115,7 @@ def get_trained_pipeline():
     peak_months = {"May", "June", "October", "November", "December"}
 
     base_prices = []
-    for age_val, city, theater, screen, month, day, show in zip(ages, cities, theaters, screen_types, months, days, show_times):
+    for age_val, gender, city, theater, screen, month, day, show in zip(ages, genders, cities, theaters, screen_types, months, days, show_times):
         price = 170.0
         
         # Location Tier Adjustments
@@ -164,11 +162,16 @@ def get_trained_pipeline():
         elif 18 <= age_val <= 24:
             price *= 0.90
             
+        # Optional Demographic adjustment (e.g. promotional women-day/ladies special rebate)
+        if gender == "Female" and day in ["Tuesday", "Wednesday"]:
+            price *= 0.95
+            
         price += np.random.normal(0, 15)
         base_prices.append(max(80.0, round(price, 2)))
 
     df = pd.DataFrame({
         'Age': ages,
+        'Gender': genders,
         'City': cities,
         'Theater': theaters,
         'Screen_Type': screen_types,
@@ -181,7 +184,7 @@ def get_trained_pipeline():
     X = df.drop('Ticket_Price_INR', axis=1)
     y = df['Ticket_Price_INR']
 
-    categorical_cols = ['City', 'Theater', 'Screen_Type', 'Month', 'Day', 'Show_Time']
+    categorical_cols = ['Gender', 'City', 'Theater', 'Screen_Type', 'Month', 'Day', 'Show_Time']
     preprocessor = ColumnTransformer(
         transformers=[
             ('cat', OneHotEncoder(drop='first', handle_unknown='ignore'), categorical_cols)
@@ -200,10 +203,10 @@ def get_trained_pipeline():
 # Train / retrieve cached model in current runtime
 model_pipeline = get_trained_pipeline()
 
-# Sidebar Inputs
+# Sidebar - Show & Booking Controls
 with st.sidebar:
     st.image("https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600&auto=format&fit=crop&q=80", use_container_width=True)
-    st.title("🎬 All-India Cinema Booking")
+    st.title("🎬 Cinema Show Details")
     
     city = st.selectbox("Select City", INDIAN_CITIES, index=0)
     theater = st.selectbox("Theater / Chain", THEATER_CHAINS, index=0)
@@ -215,14 +218,11 @@ with st.sidebar:
         max_value=datetime.date.today() + datetime.timedelta(days=365)
     )
     
-    # Automatically compute Day Name and Month Name from Selected Date
     day_name = booking_date.strftime("%A")
     month_name = booking_date.strftime("%B")
     
-    st.caption(f"📅 **Selected Day:** {day_name} | **Month:** {month_name}")
+    st.caption(f"📅 **Day:** {day_name} | **Month:** {month_name}")
 
-    age = st.slider("Viewer Age", min_value=3, max_value=85, value=24, step=1)
-    
     screen_type = st.selectbox(
         "Auditorium Format",
         ["Standard 2D", "3D", "IMAX", "4DX", "Gold/Recliner"],
@@ -235,80 +235,112 @@ with st.sidebar:
         value="Prime Evening"
     )
 
-# Badge Logic
-if age < 12:
-    badge_html = '<span class="concession-pill tag-child">🧒 Child Concession Applied (~35% discount)</span>'
-elif 18 <= age <= 24:
-    badge_html = '<span class="concession-pill tag-youth">🎓 Student / Youth Saver (~10% discount)</span>'
-elif age >= 60:
-    badge_html = '<span class="concession-pill tag-senior">👴 Senior Citizen Special (~30% discount)</span>'
-else:
-    badge_html = '<span class="concession-pill tag-standard">🎟️ Standard Adult Fare</span>'
-
-# Prepare Inference Input
-input_df = pd.DataFrame([{
-    'Age': age,
-    'City': city,
-    'Theater': theater,
-    'Screen_Type': screen_type,
-    'Month': month_name,
-    'Day': day_name,
-    'Show_Time': show_time
-}])
-
-predicted_base = float(model_pipeline.predict(input_df)[0])
-
-# GST Computation
-gst_rate = 0.12 if predicted_base <= 100 else 0.18
-gst_amount = predicted_base * gst_rate
-total_price = round(predicted_base + gst_amount)
-
-# Main Screen Output
-st.title("🇮🇳 India Cinema Ticket Price Estimator")
-st.caption("Live demographic, geographic, and seasonal predictive engine across Indian theaters.")
+# Main Screen Interface
+st.title("🇮🇳 Multi-Ticket Box-Office Pricing Engine")
+st.caption("Live dynamic fare estimator accounting for viewer demographics, formats, and peak demand.")
 st.divider()
 
-col_main, col_breakdown = st.columns([1.2, 1])
+# Viewer / Ticket Setup Section
+st.subheader("👥 Viewer Demographics & Quantity")
+num_tickets = st.number_input("Number of Tickets", min_value=1, max_value=10, value=2, step=1)
+
+viewer_data = []
+cols = st.columns(min(int(num_tickets), 4))
+
+for i in range(int(num_tickets)):
+    col_idx = i % min(int(num_tickets), 4)
+    with cols[col_idx]:
+        st.markdown(f"**Ticket #{i + 1}**")
+        v_age = st.number_input(f"Age", min_value=3, max_value=90, value=25, step=1, key=f"age_{i}")
+        v_gender = st.selectbox(f"Gender", GENDERS, key=f"gender_{i}")
+        viewer_data.append({"Age": v_age, "Gender": v_gender})
+
+# Build inference batch dataframe
+batch_records = []
+for viewer in viewer_data:
+    batch_records.append({
+        'Age': viewer['Age'],
+        'Gender': viewer['Gender'],
+        'City': city,
+        'Theater': theater,
+        'Screen_Type': screen_type,
+        'Month': month_name,
+        'Day': day_name,
+        'Show_Time': show_time
+    })
+
+input_df = pd.DataFrame(batch_records)
+
+# Predictions & Tax Calculations
+predicted_bases = model_pipeline.predict(input_df)
+
+itemized_results = []
+for idx, (base, viewer) in enumerate(zip(predicted_bases, viewer_data)):
+    rate = 0.12 if base <= 100 else 0.18
+    gst = base * rate
+    total = round(base + gst)
+    
+    # Category tag
+    age_val = viewer['Age']
+    if age_val < 12:
+        tag = '<span class="concession-pill tag-child">Child</span>'
+    elif 18 <= age_val <= 24:
+        tag = '<span class="concession-pill tag-youth">Student/Youth</span>'
+    elif age_val >= 60:
+        tag = '<span class="concession-pill tag-senior">Senior</span>'
+    else:
+        tag = '<span class="concession-pill tag-standard">Standard</span>'
+        
+    itemized_results.append({
+        "Ticket": f"#{idx + 1} ({viewer['Gender']}, {viewer['Age']}y)",
+        "Category": tag,
+        "Base Fare": round(base, 2),
+        "GST Rate": f"{int(rate * 100)}%",
+        "GST Amount": round(gst, 2),
+        "Total (INR)": total
+    })
+
+results_df = pd.DataFrame(itemized_results)
+total_order_base = sum(results_df["Base Fare"])
+total_order_gst = sum(results_df["GST Amount"])
+grand_total = sum(results_df["Total (INR)"])
+
+# Display Section
+st.write("")
+col_main, col_breakdown = st.columns([1.1, 1.2])
 
 with col_main:
+    badges_markup = "".join(results_df["Category"].tolist())
     st.markdown(
         f"""
         <div class="metric-card">
-            <div style="color: #9ca3af; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px;">Calculated Ticket Fare</div>
-            <div class="price-display">₹{total_price:,.0f}</div>
-            {badge_html}
-            <div style="margin-top: 15px; color: #6b7280; font-size: 0.85rem;">Inclusive of Central & State Entertainment GST</div>
+            <div style="color: #9ca3af; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px;">Total Payable ({num_tickets} Tickets)</div>
+            <div class="price-display">₹{grand_total:,.0f}</div>
+            <div>{badges_markup}</div>
+            <div style="margin-top: 15px; color: #6b7280; font-size: 0.85rem;">Inclusive of Central & State GST</div>
         </div>
         """,
         unsafe_allow_html=True
     )
-    
+
     st.write("")
-    with st.expander("🔍 View Raw Pipeline Input Features"):
+    with st.expander("🔍 View Batch Model Inputs"):
         st.dataframe(input_df, hide_index=True, use_container_width=True)
 
 with col_breakdown:
-    st.subheader("Invoice Breakdown")
+    st.subheader("Invoice & Ticket Summary")
     
-    fare_df = pd.DataFrame({
-        "Cost Component": [
-            "ML Base Fare Prediction",
-            f"Statutory Entertainment GST ({int(gst_rate * 100)}%)",
-            "Total Payable"
-        ],
-        "Amount (INR)": [
-            f"₹{predicted_base:.2f}",
-            f"₹{gst_amount:.2f}",
-            f"₹{total_price:.2f}"
-        ]
-    })
+    display_table = results_df[["Ticket", "Base Fare", "GST Rate", "GST Amount", "Total (INR)"]].copy()
+    display_table["Base Fare"] = display_table["Base Fare"].apply(lambda x: f"₹{x:.2f}")
+    display_table["GST Amount"] = display_table["GST Amount"].apply(lambda x: f"₹{x:.2f}")
+    display_table["Total (INR)"] = display_table["Total (INR)"].apply(lambda x: f"₹{x:.2f}")
     
-    st.table(fare_df)
+    st.dataframe(display_table, hide_index=True, use_container_width=True)
     
     st.info(
-        f"**Dynamic Pricing Factors Identified:**\n"
-        f"* **City & Location:** {city}\n"
-        f"* **Theater Type:** {theater}\n"
-        f"* **Experience Format:** {screen_type}\n"
-        f"* **Schedule:** {day_name}, {booking_date.day} {month_name} ({show_time})"
+        f"**Booking Overview:**\n"
+        f"* **Total Base Fare:** ₹{total_order_base:.2f}\n"
+        f"* **Total GST:** ₹{total_order_gst:.2f}\n"
+        f"* **Format:** {screen_type} at {theater} ({city})\n"
+        f"* **Slot:** {day_name}, {booking_date.day} {month_name} - {show_time}"
     )
