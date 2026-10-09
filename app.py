@@ -64,9 +64,79 @@ INDIAN_CITIES = sorted([
     "Siliguri", "Asansol", "Durgapur", "Jamshedpur", "Dhanbad", "Cuttack", "Gaya", "Muzaffarpur", "Shillong"
 ])
 
-THEATER_CHAINS = [
-    "PVR INOX Multiplex", "Cinepolis", "Miraj Cinemas", "Carnival Cinemas", 
-    "MovieMax", "Wave Cinemas", "SRS Cinemas", "Single Screen Heritage Theater"
+# City to Theaters Mapping
+CITY_THEATERS_MAP = {
+    "Pune": [
+        "PVR INOX Phoenix Marketcity (Viman Nagar)",
+        "PVR Pavilion Mall (SB Road)",
+        "Cinepolis Westend Mall (Aundh)",
+        "Cinepolis Seasons Mall (Magarpatta)",
+        "Miraj Cinemas (Amanora Mall)",
+        "E-Square Heritage Multiplex (Shivaji Nagar)",
+        "Vasant Single Screen Cinema (Budhwar Peth)"
+    ],
+    "Mumbai": [
+        "PVR INOX Maison (Jio World Drive BKC)",
+        "PVR Dynamix Mall (Juhu)",
+        "Cinepolis Nexus Seawoods (Navi Mumbai)",
+        "Miraj Cinemas (Wadala)",
+        "Carnival Cinemas (Oshiwara)",
+        "Regal Single Screen Cinema (Colaba)",
+        "Maratha Mandir Cinema (Mumbai Central)"
+    ],
+    "Delhi NCR": [
+        "PVR Director's Cut (Ambience Mall Vasant Kunj)",
+        "PVR INOX Plaza (Connaught Place)",
+        "Cinepolis DLF Place (Saket)",
+        "Wave Cinemas (Noida Sector 18)",
+        "Miraj Cinemas (Subhash Nagar)",
+        "Delite Heritage Cinema (Daryaganj)"
+    ],
+    "Bengaluru": [
+        "PVR INOX Orion Mall (Rajajinagar)",
+        "PVR Forum Mall (Koramangala)",
+        "Cinepolis Nexus Shantiniketan (Whitefield)",
+        "Miraj Cinemas (TJSF Mall)",
+        "Urvashi Digital 4K Theater (Lalbagh Road)"
+    ],
+    "Hyderabad": [
+        "Prasads Multiplex & Large Screen (Necklace Road)",
+        "PVR INOX Next Galleria (Panjagutta)",
+        "Cinepolis Manjeera Mall (Kukatpally)",
+        "Miraj Cinemas (Shalini Shivani)",
+        "Sudarshan 35mm (RTC X Roads)"
+    ],
+    "Chennai": [
+        "SPI Cinemas Sathyam (Royapettah)",
+        "PVR INOX VR Mall (Anna Nagar)",
+        "Cinepolis BBD Spectrum Mall (Perambur)",
+        "Rohini Silver Screens (Koyambedu)",
+        "Albert Theater (Egmore)"
+    ],
+    "Kolkata": [
+        "PVR INOX Quest Mall (Park Circus)",
+        "PVR South City Mall (Prince Anwar Shah Road)",
+        "Cinepolis Acropolis Mall (Kasba)",
+        "Miraj Cinemas (Howrah)",
+        "Prachi Single Screen Cinema (Sealdah)"
+    ],
+    "Ahmedabad": [
+        "PVR INOX Palladium Mall (Thaltej)",
+        "Cinepolis Alpha One Mall (Vastrapur)",
+        "Miraj Cinemas (Vitthal Plaza)",
+        "Drive-In Cinema (Thaltej)"
+    ]
+}
+
+DEFAULT_THEATERS = [
+    "PVR INOX Multiplex",
+    "Cinepolis",
+    "Miraj Cinemas",
+    "Carnival Cinemas",
+    "MovieMax",
+    "Wave Cinemas",
+    "SRS Cinemas",
+    "Single Screen Heritage Theater"
 ]
 
 ALL_MONTHS = [
@@ -89,7 +159,12 @@ def get_trained_pipeline():
     ages = np.random.randint(3, 80, size=n_samples)
     genders = np.random.choice(GENDERS, size=n_samples, p=[0.49, 0.49, 0.02])
     cities = np.random.choice(INDIAN_CITIES, size=n_samples)
-    theaters = np.random.choice(THEATER_CHAINS, size=n_samples)
+    
+    theaters = [
+        np.random.choice(CITY_THEATERS_MAP.get(c, DEFAULT_THEATERS))
+        for c in cities
+    ]
+    
     screen_types = np.random.choice(
         ['Standard 2D', '3D', 'IMAX', '4DX', 'Gold/Recliner'], 
         size=n_samples, 
@@ -209,7 +284,10 @@ with st.sidebar:
     st.title("🎬 Cinema Show Details")
     
     city = st.selectbox("Select City", INDIAN_CITIES, index=0)
-    theater = st.selectbox("Theater / Chain", THEATER_CHAINS, index=0)
+    
+    # Retrieve theaters belonging to selected city
+    available_theaters = CITY_THEATERS_MAP.get(city, DEFAULT_THEATERS)
+    theater = st.selectbox("Theater / Chain", available_theaters, index=0)
     
     booking_date = st.date_input(
         "Booking Date",
